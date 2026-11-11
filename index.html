@@ -36,6 +36,7 @@ button.s{background:none;border:1px solid var(--ln);color:var(--tx);border-radiu
 .tag{font-size:11px;background:var(--mvbg);border:1px solid var(--mv);border-radius:99px;padding:1px 7px;margin-left:6px}
 .sc{overflow-x:auto}svg{display:block;height:auto}.lg{font-size:12px;color:var(--mu);margin-top:4px}
 .meter{height:6px;border-radius:3px;background:var(--ln);margin-top:6px}.meter i{display:block;height:100%;border-radius:3px;background:var(--bad)}
+.mh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;width:100%;gap:4px 10px;background:none;border:0;color:var(--tx);font:inherit;padding:2px 0;cursor:pointer;text-align:left}.acts{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}.acts .s{margin-top:0}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ac);color:var(--ac2);padding:8px 14px;border-radius:8px;display:none;z-index:9}
 </style></head><body>
 <main id="app"></main><nav id="nav"></nav><div id="toast" role="status"></div>
@@ -51,7 +52,7 @@ const MIG={"Health|Insurance":["Insurance","Health insurance"],"Insurance|Health
 const mg=t=>{const m=MIG[t.cat+"|"+t.sub];if(m){t.cat=m[0];t.sub=m[1]}return t};
 const T_OUT=["Savings & Investments","Loan_Expense"],T_IN=["Saving Withdrawal","Loan_Income"],MVC=["Food","Gifts"],MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const S={tx:[],set:{go:0,mvo:248,mvd:"2026-08-23"}};
-let view="dash",dt="ov",yr="all",mo="all",ftype="Expense",ready=false,store=null,filt="",editId=null;
+let view="dash",dt="ov",yr="all",mo="all",ftype="Expense",ready=false,store=null,filt="",editId=null,dupId=null;
 const $=s=>document.querySelector(s),fm=n=>new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(n||0);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sum=f=>S.tx.filter(f).reduce((a,t)=>a+t.amt,0),r2=n=>Math.round(n*100)/100;
@@ -92,7 +93,7 @@ function yoy(f){const ys=[...new Set(S.tx.map(t=>t.date.slice(0,4)))].sort(),c=[
  return ys.map((y,i)=>[y,c[i%3],MN.map((_,j)=>{const key=y+"-"+String(j+1).padStart(2,"0");return S.tx.some(t=>t.date.slice(0,7)==key)?sum(t=>t.date.slice(0,7)==key&&f(t)):null})])}
 /* navigation */
 function nav(){$("#nav").innerHTML=[["dash","Dashboard"],["add","Add"],["list","History"],["set","Settings"],["rec","Reconcile"]].map(([a,l])=>`<button class="${view==a?"on":""}" data-v="${a}" ${view==a?'aria-current="page"':""}>${l}</button>`).join("")}
-$("#nav").onclick=e=>{const v=e.target.dataset.v;if(v){view=v;editId=null;render()}};
+$("#nav").onclick=e=>{const v=e.target.dataset.v;if(v){view=v;editId=null;dupId=null;render()}};
 function render(){if(sb&&!user){$("#nav").innerHTML="";return authScr()}nav();$("#app").innerHTML=({dash,add,list,set,rec})[view]();({add:bindAdd,list:bindList,set:bindSet,dash:bindDash,rec:bindRec})[view]()}
 /* dashboard */
 function dash(){const ys=[...new Set(S.tx.map(t=>t.date.slice(0,4)))].sort(),g=glob(),mv=mvBal();
@@ -114,30 +115,38 @@ function fg(){const F=t=>realEx(t)&&t.cat=="Food",G=t=>realEx(t)&&MVC.includes(t
  return`<div class="grid g4">${k("Food & gifts spent",fm(tot),"neg")}${k("Paid with vouchers",fm(v),"",tot?(v/tot*100).toFixed(0)+"% of total":"")}${k("Paid with real money",fm(tot-v),"neg")}</div>
 <div class="grid g2">${ch("Food by month, year over year",[],yoy(F),false,MN)}${card("Food by subcategory",rk(by(F,"sub"),"var(--bad)",sp(F)))}${card("Gifts and donations breakdown",rk(by(t=>realEx(t)&&(t.cat=="Gifts"||t.cat=="Donations & Help"),"sub"),"var(--bad)"))}${ch("Dating and girlfriend by month",[["Dating","var(--bad)",per(t=>realEx(t)&&t.sub=="Dating")],["GirlFriend","var(--mv)",per(t=>realEx(t)&&t.sub=="GirlFriend")]],[])}</div>`}
 /* add / edit */
-function add(){const e=S.tx.find(t=>t.id==editId);return`<div class="top"><h1>${e?"Edit transaction":"Add transaction"}</h1></div><div class="card"><div class="seg" id="ft"><button type="button" data-t="Expense">Expense</button><button type="button" data-t="Income">Income</button></div>
+function add(){const e=S.tx.find(t=>t.id==editId),u=!e&&S.tx.find(t=>t.id==dupId);return`<div class="top"><h1>${e?"Edit transaction":u?"Duplicate transaction":"Add transaction"}</h1></div><div class="card">${u?'<div class="mu" style="margin-bottom:8px">Copy of an existing entry: adjust the price or the date, then save it as a new one.</div>':""}<div class="seg" id="ft"><button type="button" data-t="Expense">Expense</button><button type="button" data-t="Income">Income</button></div>
 <label for="d">Date</label><input type="date" id="d" value="${new Date().toISOString().slice(0,10)}">
 <label for="c">Category</label><select id="c"></select><label for="sc">Subcategory</label><select id="sc"></select>
 <label for="a">Total amount (€)</label><input id="a" type="number" inputmode="decimal" step="0.01" min="0">
 <div class="mvbox" id="mvb"><label for="mv" style="margin-top:0">MealV_amount (€, optional)</label><input id="mv" type="number" inputmode="decimal" step="0.01" min="0" value="0"><div class="mu" id="pv"></div></div>
-<label for="n">Note (required)</label><input id="n" maxlength="120" required><button class="b" id="go">${e?"Save changes":"Save transaction"}</button>${e?'<button class="b" id="cn" style="background:none;color:var(--tx);border:1px solid var(--ln)">Cancel</button>':""}</div>`}
-function bindAdd(){const e=S.tx.find(t=>t.id==editId);if(e)ftype=e.type;
+<label for="n">Note (required)</label><input id="n" maxlength="120" required><button class="b" id="go">${e?"Save changes":"Save transaction"}</button>${e||u?'<button class="b" id="cn" style="background:none;color:var(--tx);border:1px solid var(--ln)">Cancel</button>':""}</div>`}
+function bindAdd(){const e=S.tx.find(t=>t.id==editId),u=!e&&S.tx.find(t=>t.id==dupId),s0=e||u;if(s0)ftype=s0.type;
  const pv=()=>{const a=parseFloat($("#a").value)||0,v=parseFloat($("#mv").value)||0;$("#pv").textContent=v>a?"Voucher part exceeds the total.":`Meal vouchers −${fm(v)} · Real money −${fm(a-v)}`};
  const sub=()=>{const src=ftype=="Expense"?EXP:INC,c=$("#c").value;$("#sc").innerHTML=src[c].split("|").map(s=>`<option>${esc(s)}</option>`).join("");$("#mvb").style.display=ftype=="Expense"&&MVC.includes(c)?"block":"none";pv()};
  const fill=()=>{$("#c").innerHTML=Object.keys(ftype=="Expense"?EXP:INC).map(c=>`<option>${esc(c)}</option>`).join("");sub()};
  const seg=()=>document.querySelectorAll("#ft button").forEach(b=>b.classList.toggle("on",b.dataset.t==ftype));
  $("#ft").onclick=ev=>{if(ev.target.dataset.t){ftype=ev.target.dataset.t;seg();fill()}};$("#c").onchange=sub;$("#a").oninput=pv;$("#mv").oninput=pv;seg();fill();
- if(e){$("#c").value=e.cat;sub();$("#sc").value=e.sub;$("#d").value=e.date;$("#a").value=e.amt;$("#mv").value=e.mv||0;$("#n").value=e.note||"";pv()}
- if($("#cn"))$("#cn").onclick=()=>{editId=null;view="list";render()};
+ if(s0){$("#c").value=s0.cat;sub();$("#sc").value=s0.sub;if(e)$("#d").value=e.date;$("#a").value=s0.amt;$("#mv").value=s0.mv||0;$("#n").value=s0.note||"";pv()}
+ if($("#cn"))$("#cn").onclick=()=>{editId=null;dupId=null;view="list";render()};
  $("#go").onclick=()=>{const a=r2(parseFloat($("#a").value)),mvv=$("#mvb").style.display=="block"?r2(parseFloat($("#mv").value)||0):(e&&e.cat=="Adjustment"&&$("#c").value=="Adjustment"?e.mv||0:0);
   if(!(a>0))return toast("Enter an amount above zero");if(mvv<0||mvv>a)return toast("Voucher part must be between 0 and the total");if(!$("#d").value)return toast("Pick a date");if(!$("#n").value.trim())return toast("Add a note – it is required");
   const o={date:$("#d").value,type:ftype,cat:$("#c").value,sub:$("#sc").value,amt:a,mv:mvv,note:$("#n").value.trim()};
-  let nt=e;if(e){Object.assign(e,o);editId=null;view="list";toast("Changes saved")}else{nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...o};S.tx.push(nt);toast("Saved");$("#a").value="";$("#mv").value="0";$("#n").value=""}
-  save({put:[nt]});if(view=="list")render();else pv()}}
+  let nt=e;if(e){Object.assign(e,o);editId=null;view="list";toast("Changes saved")}else{nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...o};S.tx.push(nt);if(u){dupId=null;view="list";toast("Duplicate saved")}else{toast("Saved");$("#a").value="";$("#mv").value="0";$("#n").value=""}}
+  save({put:[nt]});if(view=="list"){openM&&openM.add(nt.date.slice(0,7));render()}else pv()}}
 /* history */
-function list(){const q=filt.toLowerCase(),L=S.tx.filter(t=>!q||(t.cat+t.sub+t.note).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,200);
- return`<div class="top"><h1>History</h1><input id="q" placeholder="Search" value="${esc(filt)}" style="width:200px"></div><div class="card">${L.length?L.map(t=>`<div class="row"><div><b>${esc(t.sub)}</b>${t.mv?`<span class="tag">vouchers ${fm(t.mv)} · cash ${fm(t.amt-t.mv)}</span>`:""}<div class="mu">${esc(t.date)} · ${esc(t.cat)}${t.note?" · "+esc(t.note):""}</div></div><div style="text-align:right"><b class="${t.type=="Income"?"pos":"neg"}">${t.type=="Income"?"+":"−"}${fm(t.amt)}</b><br><button class="s" data-e="${esc(t.id)}">Edit</button> <button class="s" data-x="${esc(t.id)}">Delete</button></div></div>`).join(""):'<div class="mu">Nothing here yet.</div>'}</div>`}
+let openM=null;const MNF=["January","February","March","April","May","June","July","August","September","October","November","December"],mlab=k=>MNF[+k.slice(5)-1]+" "+k.slice(0,4);
+function list(){const q=filt.toLowerCase(),L=S.tx.filter(t=>!q||(t.cat+t.sub+t.note+t.date).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));
+ const g={};L.forEach(t=>(g[t.date.slice(0,7)]=g[t.date.slice(0,7)]||[]).push(t));const ks=Object.keys(g).sort().reverse();if(openM==null)openM=new Set(ks.slice(0,1));
+ const row=t=>`<div class="row"><div><b>${esc(t.sub)}</b>${t.mv?`<span class="tag">vouchers ${fm(t.mv)} · cash ${fm(t.amt-t.mv)}</span>`:""}<div class="mu">${esc(t.date)} · ${esc(t.cat)}${t.note?" · "+esc(t.note):""}</div></div><div style="text-align:right"><b class="${t.type=="Income"?"pos":"neg"}">${t.type=="Income"?"+":"−"}${fm(t.amt)}</b><div class="acts"><button class="s" data-e="${esc(t.id)}">Edit</button><button class="s" data-c="${esc(t.id)}">Duplicate</button><button class="s" data-x="${esc(t.id)}">Delete</button></div></div></div>`;
+ return`<div class="top"><h1>History</h1><input id="q" placeholder="Search" value="${esc(filt)}" style="width:200px"></div>`+(ks.length?ks.map(k=>{const a=g[k],inc=a.filter(realIn).reduce((x,t)=>x+t.amt,0),ex=a.filter(realEx).reduce((x,t)=>x+t.amt,0),o=q||openM.has(k);
+  return`<div class="card" style="margin-bottom:10px"><button class="mh" data-m="${k}" aria-expanded="${o?"true":"false"}" title="Real income and real expenses (transfers excluded)"><b>${mlab(k)}</b><span class="mu">${a.length} entries · income <span class="pos">+${fm(inc)}</span> · expenses <span class="neg">−${fm(ex)}</span></span><span aria-hidden="true">${o?"▾":"▸"}</span></button>${o?a.map(row).join(""):""}</div>`}).join(""):'<div class="card mu">Nothing here yet.</div>')}
 function bindList(){$("#q").oninput=e=>{filt=e.target.value;const p=e.target.selectionStart;render();const q=$("#q");q.focus();q.setSelectionRange(p,p)};
- $("#app").onclick=e=>{const d=e.target.dataset;if(d.e){editId=d.e;view="add";render()}if(d.x&&confirm("Delete this transaction?")){S.tx=S.tx.filter(t=>t.id!=d.x);save({del:[d.x]});render()}}}
+ $("#app").onclick=e=>{const b=e.target.closest("[data-m],[data-e],[data-c],[data-x]");if(!b)return;const d=b.dataset;
+  if(d.m){openM.has(d.m)?openM.delete(d.m):openM.add(d.m);render()}
+  else if(d.e){editId=d.e;dupId=null;view="add";render()}
+  else if(d.c){dupId=d.c;editId=null;view="add";render()}
+  else if(d.x&&confirm("Delete this transaction?")){S.tx=S.tx.filter(t=>t.id!=d.x);save({del:[d.x]});render()}}}
 function set(){return`<div class="top"><h1>Settings</h1></div><div class="card"><h2>Opening figures</h2><div class="mu">The voucher balance starts from these values and counts only transactions after the start date.</div>
 <label for="mvo">Meal voucher opening balance (€)</label><input id="mvo" type="number" step="0.01" value="${S.set.mvo}"><label for="mvd">Voucher start date</label><input id="mvd" type="date" value="${S.set.mvd}">
 <label for="go">Global opening balance (€)</label><input id="go" type="number" step="0.01" value="${S.set.go}"><button class="b" id="ss">Save settings</button></div>
