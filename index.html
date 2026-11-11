@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocketbook – personal expenses</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f8;--sf:#fff;--tx:#14213d;--mu:#66708a;--ln:#dde2ea;--ac:#14213d;--ac2:#fff;--mv:#e8a317;--mvbg:#fff4d6;--ok:#0f9d8a;--bad:#d23b2a;--b2:#3a6ea5;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1424;--sf:#182038;--tx:#e8ecf5;--mu:#97a1ba;--ln:#2a3453;--ac:#e8ecf5;--ac2:#0e1424;--mvbg:#3a2f12;--ok:#3fd0bb;--bad:#ff6b57;--b2:#7fb0e6}}
+:root[data-theme="dark"]{--bg:#0e1424;--sf:#182038;--tx:#e8ecf5;--mu:#97a1ba;--ln:#2a3453;--ac:#e8ecf5;--ac2:#0e1424;--mvbg:#3a2f12;--ok:#3fd0bb;--bad:#ff6b57;--b2:#7fb0e6}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 15px/1.45 Manrope,system-ui,sans-serif;padding-bottom:76px}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:20px;font-weight:800;margin:0}h2{font-size:15px;font-weight:800;margin:0 0 10px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:14px}
+.grid{display:grid;gap:12px;margin-bottom:12px}.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.mu{color:var(--mu);font-size:13px}.big{font-size:24px;font-weight:800;letter-spacing:-.5px}.pos{color:var(--ok)}.neg{color:var(--bad)}
+.ticket{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));padding:0;overflow:hidden;margin-bottom:12px}
+.ticket>div{padding:14px}.ticket>div:last-child{background:var(--mvbg);border-left:2px dashed var(--mv)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;border:0;background:none;color:var(--mu);font:600 13px Manrope,sans-serif;padding:14px 4px;cursor:pointer}
+nav button.on{color:var(--tx);box-shadow:inset 0 3px var(--mv)}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+input,select,button.b{width:100%;font:inherit;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx)}
+.top select{width:auto;padding:6px 8px}
+button.b{background:var(--ac);color:var(--ac2);font-weight:800;border:0;cursor:pointer;margin-top:14px}
+button.s{background:none;border:1px solid var(--ln);color:var(--tx);border-radius:8px;padding:5px 9px;font:inherit;font-size:13px;cursor:pointer;margin-top:4px}
+:focus-visible{outline:2px solid var(--mv);outline-offset:2px}
+.seg{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}.seg button{flex:1;white-space:nowrap;padding:9px 12px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--tx);font:600 14px Manrope,sans-serif;cursor:pointer}
+.seg button.on{background:var(--ac);color:var(--ac2)}
+.mvbox{background:var(--mvbg);border:1px dashed var(--mv);border-radius:8px;padding:10px;margin-top:10px}
+.bar{display:grid;grid-template-columns:120px 1fr 112px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.bar i{display:block;height:10px;border-radius:5px}.bar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar span:last-child{text-align:right}
+.row{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--ln)}.row:last-child{border:0}
+.tag{font-size:11px;background:var(--mvbg);border:1px solid var(--mv);border-radius:99px;padding:1px 7px;margin-left:6px}
+.sc{overflow-x:auto}svg{display:block;height:auto}.lg{font-size:12px;color:var(--mu);margin-top:4px}
+.meter{height:6px;border-radius:3px;background:var(--ln);margin-top:6px}.meter i{display:block;height:100%;border-radius:3px;background:var(--bad)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ac);color:var(--ac2);padding:8px 14px;border-radius:8px;display:none;z-index:9}
+</style></head><body>
+<main id="app"></main><nav id="nav"></nav><div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const EXP={"Donations & Help":"Father|Mother|Extended family|Siblings|Friends (help)|Other_donation","Education":"Training|Certifications|Learning Resources|Other_edu","Food":"Groceries|Restaurants/Outings|Coffee&Snack|Other_food","Gifts":"Family|Friends (gift)|Colleague|Other_gift","Health":"Medical consultations|Pharmacy|Other_Health","Housing":"Rent|Gas|Water|Electricity|Internet/Phone|Household supplies|Furniture & Equipment|Other_Housing","Insurance":"Health insurance|Life insurance|Other_Insurance","Personal":"Clothing|Sports/Fitness|Beauty & Grooming|Leisure/Culture|Subscriptions (streaming, etc.)|Other_perso","Social&Dating":"Dating|GirlFriend|Other_Social","Technology":"Hardware|Software&Services|Other_Techno","Taxes & Administrative":"Income tax|Local taxes|Administrative Fees|Other_taxes","Transport":"Taxi&Ride sharing|Public Transport Ticket|Public Transport Subscription|Maintenance|Other_transport","Travel":"Travel transport|Accommodation|Tourism activities|Other_travel","Savings & Investments":"Savings|Investments","Loan_Expense":"Money Lent|Money Paid Back|Tontine paid","Adjustment":"Unidentified expense"};
+const INC={"Income":"Salary|Meal vouchers|Health reimbursements|Bonus/Prime|Investment income|Other income","Loan_Income":"Loan return|Money Borrowed|Tontine received","Saving Withdrawal":"Saving Withdrawal","Adjustment":"Unidentified income"};
+/* referential v2: classes Revenu / Dépense / Transfert (T_OUT, T_IN) / Ajustement; fixed list; migration of old names */
+/* fixed/variable analysis suspended for now; list kept to re-enable later */
+const FIX=["Rent","Gas","Water","Electricity","Internet/Phone","Health insurance","Life insurance","Other_Insurance","Subscriptions (streaming, etc.)","Income tax","Local taxes","Public Transport Subscription"];
+const MIG={"Health|Insurance":["Insurance","Health insurance"],"Insurance|Health":["Insurance","Health insurance"],"Insurance|Life":["Insurance","Life insurance"],"Donations & Help|Friend":["Donations & Help","Friends (help)"],"Donations & Help|Other":["Donations & Help","Other_donation"],"Gifts|Friends":["Gifts","Friends (gift)"],"Education|Learning Ressources":["Education","Learning Resources"],"Personal|Beauty":["Personal","Beauty & Grooming"],"Personal|Beauty&Grooming":["Personal","Beauty & Grooming"],"Loan_Expense|Tontine":["Loan_Expense","Tontine paid"],"Loan_Income|Tontine_Received":["Loan_Income","Tontine received"],"Adjustment|Unidentified":["Adjustment","Unidentified expense"]};
+const mg=t=>{const m=MIG[t.cat+"|"+t.sub];if(m){t.cat=m[0];t.sub=m[1]}return t};
+const T_OUT=["Savings & Investments","Loan_Expense"],T_IN=["Saving Withdrawal","Loan_Income"],MVC=["Food","Gifts"],MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const S={tx:[],set:{go:0,mvo:248,mvd:"2026-08-23"}};
+let view="dash",dt="ov",yr="all",mo="all",ftype="Expense",ready=false,store=null,filt="",editId=null;
+const $=s=>document.querySelector(s),fm=n=>new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(n||0);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sum=f=>S.tx.filter(f).reduce((a,t)=>a+t.amt,0),r2=n=>Math.round(n*100)/100;
+const realIn=t=>t.type=="Income"&&!T_IN.includes(t.cat),realEx=t=>t.type=="Expense"&&!T_OUT.includes(t.cat);
+const P=t=>(yr=="all"||t.date.slice(0,4)==yr)&&(mo=="all"||t.date.slice(5,7)==mo),Yf=t=>yr=="all"||t.date.slice(0,4)==yr;
+const sp=f=>sum(t=>P(t)&&f(t)),mon=()=>[...new Set(S.tx.filter(Yf).map(t=>t.date.slice(0,7)))].sort().slice(-24),ml=m=>m.slice(5)+"/"+m.slice(2,4);
+const per=f=>mon().map(m=>sum(t=>t.date.slice(0,7)==m&&f(t)));
+function mvBal(){const a=S.tx.filter(t=>t.date>S.set.mvd);return S.set.mvo+a.filter(t=>t.type=="Income"&&t.sub=="Meal vouchers").reduce((s,t)=>s+t.amt,0)-a.filter(t=>t.type=="Expense").reduce((s,t)=>s+(t.mv||0),0)}
+const glob=()=>S.set.go+sum(t=>t.type=="Income")-sum(t=>t.type=="Expense");
+function toast(m){const e=$("#toast");e.textContent=m;e.style.display="block";setTimeout(()=>e.style.display="none",2200)}
+const CFG=window.PB_CONFIG,sb=CFG&&window.supabase?window.supabase.createClient(CFG.url,CFG.key):null;let user=null;
+const LK="pocketbook-v1";
+function merge(d){if(!d)return;if(d.set)S.set={...S.set,...d.set};const ids=new Set(S.tx.map(t=>t.id));(d.tx||[]).forEach(t=>{if(!ids.has(t.id))S.tx.push(t)});S.tx.forEach(mg)}
+async function init(){if(sb)return initCloud();render();
+ try{const c=window.claude;if(c){const u=await c.use("user"),db=await c.use("db"),id=u&&await u.id();if(db&&id){store=db.doc("data/users/"+id+"/ledger");const s=await store.get();if(s.exists)merge(s.data())}}}catch(e){store=null}
+ if(!store)try{merge(JSON.parse(localStorage.getItem(LK)))}catch(e){}
+ ready=true;render();if(S.tx.length)save()}
+const row=t=>({id:t.id,user_id:user.id,date:t.date,type:t.type,cat:t.cat,sub:t.sub,amt:t.amt,mv:t.mv||0,note:t.note||""});
+const unrow=r=>({id:r.id,date:r.date,type:r.type,cat:r.cat,sub:r.sub,amt:Number(r.amt),mv:Number(r.mv),note:r.note||""});
+async function cloud(ch){const ops=[];if(ch&&ch.put)for(let i=0;i<ch.put.length;i+=500)ops.push(sb.from("transactions").upsert(ch.put.slice(i,i+500).map(row)));
+ if(ch&&ch.del&&ch.del.length)ops.push(sb.from("transactions").delete().in("id",ch.del));
+ if(!ch||ch.set)ops.push(sb.from("settings").upsert({user_id:user.id,data:S.set}));
+ for(const r of await Promise.all(ops))if(r.error)throw r.error}
+let st;function save(ch){if(sb){cloud(ch).catch(e=>toast("Could not save: "+(e.message||"offline")));return}clearTimeout(st);st=setTimeout(async()=>{if(!ready)return;const d={tx:S.tx,set:S.set};try{if(store)await store.set(d);else localStorage.setItem(LK,JSON.stringify(d))}catch(e){toast("Could not save – check connection")}},400)}
+/* chart helpers: B = bars [name,color,values], L = lines [name,color,values|null] */
+function ch(title,B,Ln,stack,labels){const L=labels||mon().map(ml);if(!L.length)return card(title,'<div class="mu">No data for this period.</div>');
+ const all=[...B,...Ln].flatMap(s=>s[2]).filter(v=>v!=null),mx=Math.max(1,...all),mn=Math.min(0,...all),H=120,w=Math.max(320,L.length*(stack?18:B.length*13+14)+20),gw=(w-20)/L.length,n=stack?1:Math.max(1,B.length),bw=Math.min(16,(gw-6)/n),sy=v=>8+(mx-v)/(mx-mn)*H,z=sy(0);
+ let s=`<svg viewBox="0 0 ${w} ${H+30}" width="${w}" role="img" aria-label="${esc(title)}"><line x1="10" x2="${w-10}" y1="${z}" y2="${z}" stroke="var(--ln)"/>`;
+ B.forEach((b,i)=>b[2].forEach((v,j)=>{const x=10+j*gw+(gw-bw*n)/2+(stack?0:i*bw),y=sy(v);s+=`<rect x="${x}" y="${Math.min(y,z)}" width="${bw}" height="${Math.abs(y-z)}" rx="2" fill="${b[1]}"/>`}));
+ Ln.forEach(l=>{let d="",g=true;l[2].forEach((v,j)=>{if(v==null){g=true;return}d+=(g?"M":"L")+(10+j*gw+gw/2)+" "+sy(v);g=false});s+=`<path d="${d}" fill="none" stroke="${l[1]}" stroke-width="2.5"/>`});
+ L.forEach((t,j)=>s+=`<text x="${10+j*gw+gw/2}" y="${H+24}" font-size="9" text-anchor="middle" fill="var(--mu)">${t}</text>`);
+ return card(title,`<div class="sc">${s}</svg></div><div class="lg">${[...B,...Ln].map(b=>`<span style="color:${b[1]}">●</span> ${esc(b[0])}`).join(" &nbsp; ")}</div>`)}
+const card=(t,b)=>`<div class="card"><h2>${t}</h2>${b}</div>`;
+const k=(l,v,c="",s="")=>`<div class="card"><div class="mu">${l}</div><div class="big ${c}">${v}</div><div class="mu">${s}</div></div>`;
+const by=(f,key)=>{const o={};S.tx.filter(t=>P(t)&&f(t)).forEach(t=>o[t[key]]=(o[t[key]]||0)+t.amt);return Object.entries(o).sort((a,b)=>b[1]-a[1])};
+const rk=(E,c,tot)=>E.length?E.map(([l,v])=>`<div class="bar"><span title="${esc(l)}">${esc(l)}</span><span><i style="width:${v/E[0][1]*100}%;background:${c}"></i></span><span>${fm(v)}${tot?" · "+(v/tot*100).toFixed(0)+"%":""}</span></div>`).join(""):'<div class="mu">No data for this period.</div>';
+function yoy(f){const ys=[...new Set(S.tx.map(t=>t.date.slice(0,4)))].sort(),c=["var(--mu)","var(--tx)","var(--b2)"];
+ return ys.map((y,i)=>[y,c[i%3],MN.map((_,j)=>{const key=y+"-"+String(j+1).padStart(2,"0");return S.tx.some(t=>t.date.slice(0,7)==key)?sum(t=>t.date.slice(0,7)==key&&f(t)):null})])}
+/* navigation */
+function nav(){$("#nav").innerHTML=[["dash","Dashboard"],["add","Add"],["list","History"],["set","Settings"],["rec","Reconcile"]].map(([a,l])=>`<button class="${view==a?"on":""}" data-v="${a}" ${view==a?'aria-current="page"':""}>${l}</button>`).join("")}
+$("#nav").onclick=e=>{const v=e.target.dataset.v;if(v){view=v;editId=null;render()}};
+function render(){if(sb&&!user){$("#nav").innerHTML="";return authScr()}nav();$("#app").innerHTML=({dash,add,list,set,rec})[view]();({add:bindAdd,list:bindList,set:bindSet,dash:bindDash,rec:bindRec})[view]()}
+/* dashboard */
+function dash(){const ys=[...new Set(S.tx.map(t=>t.date.slice(0,4)))].sort(),g=glob(),mv=mvBal();
+ const T=[["ov","Overview"],["sp","Spending"],["cf","Cash flow"],["fg","Food & gifts"]];
+ const hd=`<div class="top"><h1>Pocketbook</h1><div style="display:flex;gap:6px"><select id="yr" aria-label="Year"><option value="all">All years</option>${ys.map(y=>`<option ${y==yr?"selected":""}>${y}</option>`).join("")}</select><select id="mo" aria-label="Month"><option value="all">All months</option>${MN.map((m,i)=>{const v=String(i+1).padStart(2,"0");return`<option value="${v}" ${v==mo?"selected":""}>${m}</option>`}).join("")}</select></div></div>
+<div class="card ticket"><div><div class="mu">Global balance</div><div class="big ${g<0?"neg":""}">${fm(g)}</div></div><div><div class="mu">Real money balance</div><div class="big ${g-mv<0?"neg":""}">${fm(g-mv)}</div></div><div><div class="mu">Meal voucher balance</div><div class="big">${fm(mv)}</div></div></div>
+<div class="seg">${T.map(([a,l])=>`<button data-d="${a}" class="${dt==a?"on":""}">${l}</button>`).join("")}</div>`;
+ return hd+({ov,sp:spd,cf,fg})[dt]()}
+function bindDash(){$("#yr").onchange=e=>{yr=e.target.value;render()};$("#mo").onchange=e=>{mo=e.target.value;render()};$("#app").onclick=e=>{const d=e.target.dataset.d;if(d){dt=d;render()}}}
+function ov(){const ri=sp(realIn),re=sp(realEx),pc=ri?re/ri:0,pi=per(realIn),pe=per(realEx);
+ return`<div class="grid g4">${k("Real income",fm(ri),"pos")}${k("Real expenses",fm(re),"neg")}${k("Real balance",fm(ri-re),ri-re<0?"neg":"pos",ri?"Savings rate "+((ri-re)/ri*100).toFixed(0)+"%":"")}<div class="card"><div class="mu">Expense % of income</div><div class="big">${ri?(pc*100).toFixed(0)+"%":"–"}</div><div class="meter"><i style="width:${Math.min(100,pc*100)}%"></i></div></div></div>`+
+ ch("Real income, real expenses and real balance by month",[["Real income","var(--ok)",pi],["Real expenses","var(--bad)",pe]],[["Real balance","var(--tx)",pi.map((v,i)=>v-pe[i])]])}
+function spd(){const re=sp(realEx),pe=per(realEx),d=pe.map((v,i)=>i?v-pe[i-1]:0);
+ return`<div class="grid g2">${card("Real expenses by category",rk(by(realEx,"cat"),"var(--bad)",re))}${card("Top 10 subcategories",rk(by(realEx,"sub").slice(0,10),"var(--bad)",re))}${ch("Real expenses by month, year over year",[],yoy(realEx),false,MN)}${ch("Month-over-month change",[["Increase","var(--bad)",d.map(v=>Math.max(v,0))],["Decrease","var(--ok)",d.map(v=>Math.min(v,0))]],[],true)}</div>`}
+function cf(){const A=t=>t.type=="Income",O=t=>t.type=="Expense",ti=t=>T_IN.includes(t.cat),to=t=>T_OUT.includes(t.cat),s=c=>t=>t.sub==c,c=x=>t=>t.cat==x,ci=per(A),co=per(O);
+ return`<div class="grid g4">${k("Total cash in",fm(sp(A)),"pos")}${k("Total cash out",fm(sp(O)),"neg")}${k("Transfers in",fm(sp(ti)))}${k("Transfers out",fm(sp(to)))}${k("Net savings",fm(sp(c("Savings & Investments"))-sp(c("Saving Withdrawal"))))}</div>
+<div class="grid g2">${ch("Cash in vs cash out, with net cash flow",[["Cash in","var(--ok)",ci],["Cash out","var(--bad)",co]],[["Net cash flow","var(--tx)",ci.map((v,i)=>v-co[i])]])}${ch("Real income vs transfers in",[["Real income","var(--ok)",per(realIn)],["Transfers in","var(--b2)",per(ti)]],[])}${ch("Savings deposits vs withdrawals",[["Deposits","var(--b2)",per(c("Savings & Investments"))],["Withdrawals","var(--mv)",per(c("Saving Withdrawal"))]],[])}${ch("Money lent vs loan returns",[["Money lent","var(--b2)",per(s("Money Lent"))],["Loan returns","var(--ok)",per(s("Loan return"))]],[])}${ch("Money borrowed vs paid back",[["Borrowed","var(--ok)",per(s("Money Borrowed"))],["Paid back","var(--b2)",per(s("Money Paid Back"))]],[])}${ch("Tontine paid vs received",[["Paid","var(--b2)",per(s("Tontine paid"))],["Received","var(--ok)",per(s("Tontine received"))]],[])}</div>`}
+function fg(){const F=t=>realEx(t)&&t.cat=="Food",G=t=>realEx(t)&&MVC.includes(t.cat),vt=S.tx.filter(t=>P(t)&&G(t)),v=vt.reduce((a,t)=>a+(t.mv||0),0),tot=vt.reduce((a,t)=>a+t.amt,0);
+ return`<div class="grid g4">${k("Food & gifts spent",fm(tot),"neg")}${k("Paid with vouchers",fm(v),"",tot?(v/tot*100).toFixed(0)+"% of total":"")}${k("Paid with real money",fm(tot-v),"neg")}</div>
+<div class="grid g2">${ch("Food by month, year over year",[],yoy(F),false,MN)}${card("Food by subcategory",rk(by(F,"sub"),"var(--bad)",sp(F)))}${card("Gifts and donations breakdown",rk(by(t=>realEx(t)&&(t.cat=="Gifts"||t.cat=="Donations & Help"),"sub"),"var(--bad)"))}${ch("Dating and girlfriend by month",[["Dating","var(--bad)",per(t=>realEx(t)&&t.sub=="Dating")],["GirlFriend","var(--mv)",per(t=>realEx(t)&&t.sub=="GirlFriend")]],[])}</div>`}
+/* add / edit */
+function add(){const e=S.tx.find(t=>t.id==editId);return`<div class="top"><h1>${e?"Edit transaction":"Add transaction"}</h1></div><div class="card"><div class="seg" id="ft"><button type="button" data-t="Expense">Expense</button><button type="button" data-t="Income">Income</button></div>
+<label for="d">Date</label><input type="date" id="d" value="${new Date().toISOString().slice(0,10)}">
+<label for="c">Category</label><select id="c"></select><label for="sc">Subcategory</label><select id="sc"></select>
+<label for="a">Total amount (€)</label><input id="a" type="number" inputmode="decimal" step="0.01" min="0">
+<div class="mvbox" id="mvb"><label for="mv" style="margin-top:0">MealV_amount (€, optional)</label><input id="mv" type="number" inputmode="decimal" step="0.01" min="0" value="0"><div class="mu" id="pv"></div></div>
+<label for="n">Note (required)</label><input id="n" maxlength="120" required><button class="b" id="go">${e?"Save changes":"Save transaction"}</button>${e?'<button class="b" id="cn" style="background:none;color:var(--tx);border:1px solid var(--ln)">Cancel</button>':""}</div>`}
+function bindAdd(){const e=S.tx.find(t=>t.id==editId);if(e)ftype=e.type;
+ const pv=()=>{const a=parseFloat($("#a").value)||0,v=parseFloat($("#mv").value)||0;$("#pv").textContent=v>a?"Voucher part exceeds the total.":`Meal vouchers −${fm(v)} · Real money −${fm(a-v)}`};
+ const sub=()=>{const src=ftype=="Expense"?EXP:INC,c=$("#c").value;$("#sc").innerHTML=src[c].split("|").map(s=>`<option>${esc(s)}</option>`).join("");$("#mvb").style.display=ftype=="Expense"&&MVC.includes(c)?"block":"none";pv()};
+ const fill=()=>{$("#c").innerHTML=Object.keys(ftype=="Expense"?EXP:INC).map(c=>`<option>${esc(c)}</option>`).join("");sub()};
+ const seg=()=>document.querySelectorAll("#ft button").forEach(b=>b.classList.toggle("on",b.dataset.t==ftype));
+ $("#ft").onclick=ev=>{if(ev.target.dataset.t){ftype=ev.target.dataset.t;seg();fill()}};$("#c").onchange=sub;$("#a").oninput=pv;$("#mv").oninput=pv;seg();fill();
+ if(e){$("#c").value=e.cat;sub();$("#sc").value=e.sub;$("#d").value=e.date;$("#a").value=e.amt;$("#mv").value=e.mv||0;$("#n").value=e.note||"";pv()}
+ if($("#cn"))$("#cn").onclick=()=>{editId=null;view="list";render()};
+ $("#go").onclick=()=>{const a=r2(parseFloat($("#a").value)),mvv=$("#mvb").style.display=="block"?r2(parseFloat($("#mv").value)||0):(e&&e.cat=="Adjustment"&&$("#c").value=="Adjustment"?e.mv||0:0);
+  if(!(a>0))return toast("Enter an amount above zero");if(mvv<0||mvv>a)return toast("Voucher part must be between 0 and the total");if(!$("#d").value)return toast("Pick a date");if(!$("#n").value.trim())return toast("Add a note – it is required");
+  const o={date:$("#d").value,type:ftype,cat:$("#c").value,sub:$("#sc").value,amt:a,mv:mvv,note:$("#n").value.trim()};
+  let nt=e;if(e){Object.assign(e,o);editId=null;view="list";toast("Changes saved")}else{nt={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...o};S.tx.push(nt);toast("Saved");$("#a").value="";$("#mv").value="0";$("#n").value=""}
+  save({put:[nt]});if(view=="list")render();else pv()}}
+/* history */
+function list(){const q=filt.toLowerCase(),L=S.tx.filter(t=>!q||(t.cat+t.sub+t.note).toLowerCase().includes(q)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,200);
+ return`<div class="top"><h1>History</h1><input id="q" placeholder="Search" value="${esc(filt)}" style="width:200px"></div><div class="card">${L.length?L.map(t=>`<div class="row"><div><b>${esc(t.sub)}</b>${t.mv?`<span class="tag">vouchers ${fm(t.mv)} · cash ${fm(t.amt-t.mv)}</span>`:""}<div class="mu">${esc(t.date)} · ${esc(t.cat)}${t.note?" · "+esc(t.note):""}</div></div><div style="text-align:right"><b class="${t.type=="Income"?"pos":"neg"}">${t.type=="Income"?"+":"−"}${fm(t.amt)}</b><br><button class="s" data-e="${esc(t.id)}">Edit</button> <button class="s" data-x="${esc(t.id)}">Delete</button></div></div>`).join(""):'<div class="mu">Nothing here yet.</div>'}</div>`}
+function bindList(){$("#q").oninput=e=>{filt=e.target.value;const p=e.target.selectionStart;render();const q=$("#q");q.focus();q.setSelectionRange(p,p)};
+ $("#app").onclick=e=>{const d=e.target.dataset;if(d.e){editId=d.e;view="add";render()}if(d.x&&confirm("Delete this transaction?")){S.tx=S.tx.filter(t=>t.id!=d.x);save({del:[d.x]});render()}}}
+function set(){return`<div class="top"><h1>Settings</h1></div><div class="card"><h2>Opening figures</h2><div class="mu">The voucher balance starts from these values and counts only transactions after the start date.</div>
+<label for="mvo">Meal voucher opening balance (€)</label><input id="mvo" type="number" step="0.01" value="${S.set.mvo}"><label for="mvd">Voucher start date</label><input id="mvd" type="date" value="${S.set.mvd}">
+<label for="go">Global opening balance (€)</label><input id="go" type="number" step="0.01" value="${S.set.go}"><button class="b" id="ss">Save settings</button></div>
+<div class="card" style="margin-top:12px"><h2>How balances work</h2><div class="mu">Global balance = opening + all income − all expenses. Meal voucher balance = opening + voucher income − the MealV_amount entered on Food and Gifts expenses. Real money balance = global balance − voucher balance, so the rest of each Food or Gifts expense comes out of real money. Real income excludes savings withdrawals and loan inflows; real expenses exclude savings deposits and loan outflows. Adjustments (from Reconcile) count in both, so the real balance stays true.</div></div><div class="card" style="margin-top:12px"><h2>Backup and account</h2><div class="mu">${sb&&user?esc(user.email)+" · synced to your cloud account.":"Data is stored in this browser or in your Claude account."}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="s" id="ex">Export JSON</button><button class="s" id="im">Import JSON</button>${sb&&user?'<button class="s" id="so">Sign out</button>':""}</div><input type="file" id="fi" accept="application/json" hidden></div>`}
+function bindSet(){bindBk();$("#ss").onclick=()=>{S.set={mvo:parseFloat($("#mvo").value)||0,mvd:$("#mvd").value||"2026-08-23",go:parseFloat($("#go").value)||0};save({set:1});toast("Settings saved")}}
+/* reconcile: rebalance tracking after a forgotten entry */
+function rec(){const rm=glob()-mvBal(),vb=mvBal();
+ const blk=(t,id,c)=>`<h2 style="margin-top:16px">${t}</h2><div class="mu">App balance: <b>${fm(c)}</b></div><label for="${id}">Actual balance (€)</label><input id="${id}" type="number" step="0.01" inputmode="decimal"><div class="mu" id="${id}t"></div><button class="b" id="${id}b">Create adjustment</button>`;
+ return`<div class="top"><h1>Reconcile</h1></div><div class="card"><div class="mu">Enter the balances you really have. If they differ from the app, an adjustment rebalances your tracking.</div>${blk("Real money (bank + cash)","ra",rm)}${blk("Meal vouchers","va",vb)}</div>`}
+function bindRec(){const rm=glob()-mvBal(),vb=mvBal();
+ const gap=(id,c)=>{const v=parseFloat($("#"+id).value);return isNaN(v)?null:r2(v-c)};
+ const txt=(id,c,vou)=>{const g=gap(id,c);$("#"+id+"t").textContent=g==null?"":g==0?"Balances match. Nothing to adjust.":g<0?`Gap ${fm(g)} → adjustment expense of ${fm(-g)}${vou?" paid with vouchers":""}`:`Gap +${fm(g)} → ${vou?"meal vouchers received but not recorded":"adjustment income"} of ${fm(g)}`};
+ const mk=(id,c,vou)=>{const g=gap(id,c);if(g==null||g==0)return toast(g==0?"Already balanced":"Enter the actual balance");
+  if(!confirm("Create an adjustment of "+fm(Math.abs(g))+"?"))return;
+  const b={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:new Date().toISOString().slice(0,10),note:"Reconciliation"};
+  const nt=(g<0?{...b,type:"Expense",cat:"Adjustment",sub:"Unidentified expense",amt:-g,mv:vou?-g:0}:vou?{...b,type:"Income",cat:"Income",sub:"Meal vouchers",amt:g,mv:0}:{...b,type:"Income",cat:"Adjustment",sub:"Unidentified income",amt:g,mv:0});
+  S.tx.push(nt);save({put:[nt]});toast("Adjustment created");render()};
+ [["ra",rm,0],["va",vb,1]].forEach(([id,c,v])=>{$("#"+id).oninput=()=>txt(id,c,v);$("#"+id+"b").onclick=()=>mk(id,c,v)})}
+/* backup, cloud sync (Supabase) and sign-in */
+function bindBk(){$("#ex").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({tx:S.tx,set:S.set},null,1)],{type:"application/json"}));a.download="pocketbook-backup-"+new Date().toISOString().slice(0,10)+".json";a.click()};
+ $("#im").onclick=()=>$("#fi").click();
+ $("#fi").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text()),ids=new Set(S.tx.map(t=>t.id)),nw=(d.tx||[]).filter(t=>t&&t.id&&t.date&&["Income","Expense"].includes(t.type)&&typeof t.amt=="number"&&t.amt>=0&&!ids.has(t.id)).map(mg);
+  S.tx.push(...nw);save(sb?{put:nw}:undefined);toast(nw.length+" transactions imported");render()}catch(x){toast("Invalid backup file")}};
+ if($("#so"))$("#so").onclick=()=>sb.auth.signOut()}
+async function pull(){const all=[];for(let i=0;;i+=1000){const{data,error}=await sb.from("transactions").select("*").order("id").range(i,i+999);if(error)throw error;all.push(...data);if(data.length<1000)break}
+ S.tx=all.map(unrow);const r=await sb.from("settings").select("data").maybeSingle();if(r.data&&r.data.data)S.set={...S.set,...r.data.data}}
+async function loadCloud(){try{await pull();ready=true;
+ if(!S.tx.length){let l=null;try{l=JSON.parse(localStorage.getItem(LK))}catch(e){}
+  if(l&&l.tx&&l.tx.length&&confirm("Upload "+l.tx.length+" transactions saved in this browser to your cloud account?")){l.tx.forEach(mg);S.tx=l.tx;if(l.set)S.set={...S.set,...l.set};await cloud({put:S.tx,set:1})}}
+ render()}catch(e){toast("Cloud error: "+(e.message||e))}}
+async function initCloud(){const{data}=await sb.auth.getSession();user=data.session&&data.session.user||null;
+ sb.auth.onAuthStateChange((_,ses)=>{const u=ses&&ses.user||null;if((u&&u.id)!=(user&&user.id))setTimeout(()=>{user=u;if(u)loadCloud();else{S.tx=[];ready=false;render()}},0)});
+ document.addEventListener("visibilitychange",async()=>{if(document.visibilityState=="visible"&&user&&ready&&view!="add"&&view!="rec"){try{await pull();render()}catch(e){}}});
+ if(user)await loadCloud();else render()}
+function authScr(){$("#app").innerHTML=`<div class="top"><h1>Pocketbook</h1></div><div class="card" style="max-width:380px;margin:20px auto"><h2>Sign in</h2><label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="pw">Password (6+ characters)</label><input id="pw" type="password" autocomplete="current-password"><button class="b" id="si">Sign in</button><button class="b" id="su" style="background:none;color:var(--tx);border:1px solid var(--ln)">Create account</button><div class="mu" id="am" style="margin-top:8px"></div></div>`;
+ const go=async up=>{const c={email:$("#em").value.trim(),password:$("#pw").value};if(!c.email||c.password.length<6)return $("#am").textContent="Enter an email and a password of 6+ characters.";
+  const r=up?await sb.auth.signUp(c):await sb.auth.signInWithPassword(c);$("#am").textContent=r.error?r.error.message:up&&!r.data.session?"Account created. Check your email to confirm it, then sign in.":""};
+ $("#si").onclick=()=>go(0);$("#su").onclick=()=>go(1)}
+init();
+</script></body></html>
